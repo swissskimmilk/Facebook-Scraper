@@ -1,0 +1,2 @@
+facebook-scraper
+mysql-connector-python
