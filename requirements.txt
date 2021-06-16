@@ -1,2 +1,3 @@
 facebook-scraper
-mysql-connector-python
+mysql-connector-python~=8.0.25
+requests~=2.25.1
