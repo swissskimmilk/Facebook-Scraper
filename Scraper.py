@@ -1,13 +1,20 @@
 from facebook_scraper import get_posts
 from facebook_scraper import get_profile
+
 from datetime import datetime
+
 import mysql.connector
-import requests
+
+import time
+
+from random import seed
+from random import random
 
 # Declare & initialize constants
 databaseName = "facebook_scraper_data"
 citiesInDistrict = ['palo alto', 'stanford', 'los altos', 'woodside', 'mountain view', 'los altos hills', 'campbell',
                     'saratoga', 'los gatos', 'scotts valley', 'menlo park', 'redwood city', 'san jose', 'santa cruz']
+seed(1)
 
 database = mysql.connector.connect(
     host="localhost",
@@ -17,7 +24,6 @@ database = mysql.connector.connect(
 
 # Create database and tables
 cursor = database.cursor()
-cursor.execute("SHOW DATABASES")
 
 # Attempt to create database, pass if already exists
 try:
@@ -86,7 +92,7 @@ except mysql.connector.errors.ProgrammingError:
 
 # Get posts
 posts = get_posts('repannaeshoo', pages=1, options={"progress": True, "comments": True},
-                  credentials=("josephmayes97@gmail.com", "nHi5&UcFzk6i"))
+                  credentials=("collinmayfield95@gmail.com", "nHi5&UcFzk6i"))
 for post in posts:
     print(post)
     # Add data to posts table
@@ -174,3 +180,6 @@ for post in posts:
                      currentLocation, inDistrict, profile.get('Work'), profile.get('Basic Info'))
                 )
                 database.commit()
+            timeout = (random() * 5) + 5
+            print("Sleeping for " + str(timeout) + " seconds")
+            time.sleep(timeout)
