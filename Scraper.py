@@ -1,7 +1,6 @@
 # Known issues:
-# If a comment is already in the database, process_profile should NOT be called since the corresponding profile will have already been processed previously
 # When process_profile is called, it should update the existing profile with new information. Currently, it only adds profileID and username
-# There must be a better way to format SQL queries where the values might be NULL. The way it's done at line 258 is ridiculous
+# Comment time not working correctly
 # Notes:
 # If you start getting HTTP errors, make sure you are using a VPN and change your VPN server. Proton VPN works and is free
 # If names start printing as "You Can't Use This Feature Right Now" try switching profiles and VPN server
@@ -18,6 +17,8 @@ import time
 
 from random import seed
 from random import random
+
+processProfiles = False
 
 # Declare & initialize constants
 databaseName = "facebook_scraper_data"
@@ -157,33 +158,62 @@ def process_value(value):
 # Processes profiles and updates the profiles table
 def process_profile(profileID, username):
 
+    if not processProfiles:
+        return
+
+    # Check if entries already exists, to prevent lockout
+    if profileID is not None:
+        cursor.execute("SELECT * FROM profiles WHERE profile_id = %s", (profileID,))
+        entriesByID = cursor.fetchall()
+        print(entriesByID)
+        if len(entriesByID) > 1:
+            raise Exception("Database error: multiple profiles with same id")
+        if len(entriesByID) > 0 and entriesByID[0][3] != "Error":
+            print("Skipping " + profileID)
+            return
+    else:
+        entriesByID = None
+    if username is not None:
+        cursor.execute("SELECT * FROM profiles WHERE username = %s", (username,))
+        entriesByUsername = cursor.fetchall()
+        print(entriesByUsername)
+        if len(entriesByUsername) > 1:
+            raise Exception("Database error: multiple profiles with same username")
+        if len(entriesByUsername) > 0 and entriesByUsername[0][3] != "Error":
+            print("Skipping " + username)
+            return
+
     # Error checking
     if profileID is None and username is None:
         raise Exception("profileID and username can't both be none")
 
     # Debugging, remove later
-    print("Profile ID : " + str(profileID) + ". Username: " + str(username))
+    print("Profile ID: " + str(profileID) + ". Username: " + str(username))
 
     # Tries both profileID and username to get profile
-    try:
+    if username is not None:
         profile = get_profile(username)
         print(profile)
-    except Exception as e:
-        print("Exception occurred " + str(e))
+    else:
         profile = get_profile(profileID)
         print(profile)
 
     # Get current city and compare against cities in the district
     placesLived = profile.get('Places Lived')
     if placesLived is not None:
-
+        placesLived = placesLived.lower()
         # Catches exceptions that occur when someone doesn't have their location listed how it normally is
         try:
-            # Confusing syntax but basically it gets a substring up to ","
-            currentLocation = placesLived[:profile.get('Places Lived').index(",")]
+            if "," in placesLived:
+                currentLocation = placesLived[:placesLived.index(",")]
+                if "current city" in currentLocation:
+                    currentLocation = currentLocation[:currentLocation.index("current city")]
+            elif "current city" in placesLived:
+                currentLocation = placesLived[:placesLived.index("current city")]
+            else:
+                currentLocation = profile.get('Places Lived')
         except:
-            currentLocation = profile.get('Places Lived')
-        currentLocation = currentLocation.lower()
+            currentLocation = placesLived
 
         # Checks location again array of cities in the district, defined at the top of this file
         if currentLocation in citiesInDistrict:
@@ -199,8 +229,6 @@ def process_profile(profileID, username):
         username = username_from_profile(profile)
 
     # Checks if entry already exists
-    cursor.execute("SELECT * FROM profiles WHERE profile_id = %s", (profileID,))
-    entriesByID = cursor.fetchall()
     cursor.execute("SELECT * FROM profiles WHERE username = %s", (username,))
     entriesByUsername = cursor.fetchall()
     print("Entries by username " + str(entriesByUsername))
@@ -291,8 +319,8 @@ def process_profile(profileID, username):
 
 
 # Get posts
-posts = get_posts('repannaeshoo', pages=1, options={"progress": True, "comments": True, "reactors": True},
-                  credentials=("josephmayes97@gmail.com", "nHi5&UcFzk6i"))
+posts = get_posts('repannaeshoo', pages=60, timeout=20, options={"progress": True, "comments": True, "reactors": True},
+                  credentials=("josephmayes97@gmail.com", "nHi5&UcFzk6il"))
 
 # Process everything the function got
 for post in posts:
