@@ -1,6 +1,7 @@
 # Known issues:
 # When process_profile is called, it should update the existing profile with new information. Currently, it only adds profileID and username
-# Comment time not working correctly
+# Remove commas
+# Remove links
 # Notes:
 # If you start getting HTTP errors, make sure you are using a VPN and change your VPN server. Proton VPN works and is free
 # If names start printing as "You Can't Use This Feature Right Now" try switching profiles and VPN server
@@ -319,8 +320,8 @@ def process_profile(profileID, username):
 
 
 # Get posts
-posts = get_posts('repannaeshoo', pages=60, timeout=20, options={"progress": True, "comments": True, "reactors": True},
-                  credentials=("josephmayes97@gmail.com", "nHi5&UcFzk6il"))
+posts = get_posts('repannaeshoo', pages=1, timeout=20, options={"progress": True, "comments": True, "reactors": True},
+                  )
 
 # Process everything the function got
 for post in posts:
@@ -389,13 +390,28 @@ for post in posts:
             else:
                 repliesCount = 0
 
+            # Process comment text
+            commentText = comment['comment_text']
+            print("Raw text: " + commentText)
+            commentText = commentText.replace(",", "")
+
+            while commentText.find("http") != -1:
+                spaceIndex = commentText[commentText.find("http"):].find(" ")
+                print("space index: " + str(spaceIndex))
+                if spaceIndex == - 1:
+                    commentText = commentText[:commentText.find("http")]
+                else:
+                    commentText = commentText[:commentText.find("http")] + commentText[spaceIndex:]
+
+            print("Processed text: " + commentText)
+
             # Insert data in comments table
             cursor.execute(
                 "REPLACE INTO comments (comment_id, post_id, fetched_time, comment_url, commenter, commenter_id, "
                 "commenting_time, comment_text, replies) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
                 (comment['comment_id'], post['post_id'], datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                  comment['comment_url'], comment['commenter_name'], comment['commenter_id'], comment['comment_time'],
-                 comment['comment_text'], repliesCount)
+                 commentText, repliesCount)
             )
             database.commit()
             process_profile(comment['commenter_id'], None)
@@ -406,13 +422,29 @@ for post in posts:
                 for reply in replies:
                     print(reply)
 
+                    # Process reply text
+                    replyText = reply['comment_text']
+                    print("Raw text: " + replyText)
+                    replyText = replyText.replace(",", "")
+
+                    while replyText.find("http") != -1:
+                        print("Processing text: " + replyText)
+                        spaceIndex = replyText[replyText.find("http"):].find(" ")
+                        print("space index: " + str(spaceIndex))
+                        if spaceIndex == - 1:
+                            replyText = replyText[:replyText.find("http")]
+                        else:
+                            replyText = replyText[:replyText.find("http")] + replyText[spaceIndex:]
+
+                    print("Processed text: " + replyText)
+
                     # Insert data in replies table
                     cursor.execute(
                         "REPLACE INTO replies (comment_id, parent_comment_id, fetched_time, comment_url, commenter, commenter_id, "
                         "commenting_time, comment_text) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
                         (reply['comment_id'], comment['comment_id'], datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
                          reply['comment_url'], reply['commenter_name'], reply['commenter_id'], reply['comment_time'],
-                         reply['comment_text'])
+                         replyText)
                     )
                     database.commit()
                     process_profile(reply['commenter_id'], None)
