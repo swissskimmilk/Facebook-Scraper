@@ -25,7 +25,7 @@ processProfiles = False
 databaseName = "facebook_scraper_data"
 host = "localhost"
 user = "root"
-password="T-R294$fxy"
+password=""
 citiesInDistrict = ['palo alto', 'stanford', 'los altos', 'woodside', 'mountain view', 'los altos hills', 'campbell',
                     'saratoga', 'los gatos', 'scotts valley', 'menlo park', 'redwood city', 'san jose', 'santa cruz',
                     'cupertino', 'santa clara', 'felton', 'la honda']
@@ -321,7 +321,7 @@ def process_profile(profileID, username):
 
 # Get posts
 posts = get_posts('repannaeshoo', pages=1, timeout=20, options={"progress": True, "comments": True, "reactors": True},
-                  )
+                  credentials=("", ""))
 
 # Process everything the function got
 for post in posts:
